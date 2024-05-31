@@ -12,9 +12,6 @@ def runBash(command):
     if stdout:
         print("Output:")
         print(stdout.decode())
-    if stderr:
-        print("Error:")
-        print(stderr.decode())
 
 counter = 1
 home_dir = "/media/billiam/T7 Shield/UC Davis COVID Study/"
@@ -43,7 +40,7 @@ with os.scandir(home_dir) as entries:
                                                     print(counter)
                                                     DICOM = os.path.join(scan_dir, scan.name)
                                                     segmentName = scan_dir.replace(home_dir, '').replace('/','_')
-                                                    command = f'TotalSegmentator -i "{DICOM}" -o "./segmentations/{segmentName}" --ml --fast'
+                                                    command = f'TotalSegmentator -i "{DICOM}" -o "./segmentations/{segmentName}" --ml --force_split'
                                                     runBash(command)
                                                     counter = counter + 1
 print(counter)
