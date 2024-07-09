@@ -13,39 +13,72 @@ def runBash(command):
         print("Output:")
         print(stdout.decode())
 
-counter = 1
-home_dir = "/media/billiam/T7 Shield/UC Davis COVID Study/"
-with os.scandir(home_dir) as entries:
-    for entry in entries:
-        if entry.is_dir():
-            #print(entry.name)
-            
-            group_dir = os.path.join(home_dir, entry)
-            with os.scandir(group_dir) as patients:
-                for patient in patients:
-                    if patient.is_dir():
-                        #print(patient)
+def segment(DICOM, segmentName, task):
+    command = f'TotalSegmentator -i "{DICOM}" -o "./Segmentations/{segmentName}" --ml --force_split -ta {task}'
+    runBash(command)
 
-                        patient_dir = os.path.join(group_dir, patient)
-                        with os.scandir(patient_dir) as scan_times:
-                            for scan_time in scan_times:
-                                if scan_time.is_dir():
-                                    #print(scan_time.name)
+#home_dir = "/media/billiam/T7 Shield/UC Davis COVID Study/"
+home_dir = "E:\Psoriasis\VIP-S\\"
 
-                                    scan_dir = os.path.join(patient_dir, scan_time)
-                                    with os.scandir(scan_dir) as scans:
-                                        for scan in scans:
-                                            if scan.is_dir():
-                                                if scan.name[:2] == "CT":
-                                                    print(counter)
-                                                    DICOM = os.path.join(scan_dir, scan.name)
-                                                    segmentName = scan_dir.replace(home_dir, '').replace('/','_')
-                                                    command = f'TotalSegmentator -i "{DICOM}" -o "./segmentations/{segmentName}" --ml --force_split'
-                                                    runBash(command)
-                                                    counter = counter + 1
-print(counter)
+for patient in os.listdir(home_dir):
+    print("Working on patient: ", patient)
+    if os.path.isdir(os.path.join(home_dir, patient)):
+
+        patient_dir = os.path.join(home_dir, patient)
+        patient_dir = os.path.join(patient_dir, "study")
+
+        for scan in os.listdir(patient_dir):
+            scan_dir = os.path.join(patient_dir, scan)
+            if os.path.isdir(scan_dir):
+                site = patient[:4]
+                if site == "1002":
+                    if scan[:4] == "CTAC":
+                        segment(scan_dir, patient+"-total", "total")
+                        segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
+                        print(scan_dir)
+                elif site == "1003":
+                    if scan[:2] == "CT" or scan == "Standard-Full":
+                        if patient[:11] == "1003010-269":
+                            if scan == "Standard-Full":
+                                segment(scan_dir, patient+"-total", "total")
+                                segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
+                        else:
+                            segment(scan_dir, patient+"-total", "total")
+                            segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
+                elif site == "1005":
+                    if scan[:11] == "NON_DIAG_CT":
+                        segment(scan_dir, patient+"-total", "total")
+                        segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
+
+                # elif site == "1010":
+                #     print("test")
+                # elif site == "1011":
+                #     print("test")
+
+                elif site == "1012":                    
+                    if scan[-4:] == "eFoV":
+                        segment(scan_dir, patient+"-total", "total")
+                        segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
+                    if patient == "1012006-351-B" or patient == "1012005-444-B" or patient == "1012003-802-B" or patient == "1012003-307-B":
+                        if scan[-4:] == "B31f":
+                            segment(scan_dir, patient+"-total", "total")
+                            segment(scan_dir, patient+"-appendicular_bones", "appendicular_bones")
 
 
+
+
+
+                    # scan_dir = os.path.join(patient_dir, scan_time)
+                    # with os.scandir(scan_dir) as scans:
+                    #     for scan in scans:
+                    #         if scan.is_dir():
+                    #             if scan.name[:2] == "CT":
+                    #                 print(counter)
+                    #                 DICOM = os.path.join(scan_dir, scan.name)
+                    #                 segmentName = scan_dir.replace(home_dir, '').replace('/','_')
+                    #                 command = f'TotalSegmentator -i "{DICOM}" -o "./segmentations/{segmentName}" --ml --force_split'
+                    #                 runBash(command)
+                    #                 counter = counter + 1
 
 
 # command = 'TotalSegmentator -i "/media/billiam/T7 Shield/UC Davis COVID Study/COVID Patients/1697954_FDG_COVID_Pt002_JP/20121026/CT_SOFT_512x512/" -o "~/Documents/Scans/notebooktest" --ml'
