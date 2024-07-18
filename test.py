@@ -27,7 +27,7 @@ def rename_files_in_folders(parent_directory):
             #     print(f"Warning: Folder '{folder_path}' does not contain exactly one file.")
 
 # Example usage
-parent_directory = f'E:\Psoriasis\Finished Segmentations\\'
+parent_directory = f"E:/UC Davis COVID Study/Segmentations and PET NIFTIs/Edited Organs/Brain/"
 # rename_files_in_folders(parent_directory)
 
 def extract_segmentation(parent_directory):
@@ -58,4 +58,26 @@ def extract_segmentation(parent_directory):
             print(f"{file_path} does not exist or is not a file.")
 
     #print(segment_files)
-extract_segmentation(parent_directory)
+
+
+def rename_files(directory):
+    # String to remove from the filenames
+    string_to_remove = 'EditedBrain'
+    # Iterate over all files in the directory
+    for filename in os.listdir(directory):
+        # Construct full file path
+        old_filepath = os.path.join(directory, filename)
+        
+        # Skip if it's not a file
+        if not os.path.isfile(old_filepath):
+            continue
+        
+        # New filename after removing the string
+        new_filename = filename.replace(string_to_remove, '')
+        new_filepath = os.path.join(directory, new_filename)
+        
+        # Rename the file
+        os.rename(old_filepath, new_filepath)
+        print(f'Renamed: {old_filepath} -> {new_filepath}')
+
+rename_files(parent_directory)
