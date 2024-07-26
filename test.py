@@ -144,4 +144,4 @@ def add_prefix_to_files(directory, prefix):
             os.rename(file_path, new_file_path)
             print(f"Renamed '{file_path}' to '{new_file_path}'")
 
-add_prefix_to_files(directory, "INTERIM_")
+#add_prefix_to_files(directory, "INTERIM_")

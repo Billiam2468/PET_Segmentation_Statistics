@@ -1,3 +1,6 @@
+# This script is a barebones script that is used once the user has all the PET NIFTI files (after conversion) and segmentation files.
+# It will convert the segmentations and corresponding PET NIFTIs to generate statistics based on whatever organ/structure the user is interested in
+
 # Segmentation Map
 total_segmentator_names = [
     "background",
