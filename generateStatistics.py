@@ -128,6 +128,7 @@ import numpy as np
 import pydicom
 from datetime import datetime
 import os
+import gc
 from scipy import interpolate
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -298,14 +299,14 @@ def calculate_suv_statistics_chunked(roi_data, pet_data, chunk_size=(64, 64, 64)
                 for roi in unique_rois:
                     if roi == 0:
                         continue  # Skip the background
-
-                    roi_mask = (roi_chunk == roi)
-                    suv_values = pet_chunk[roi_mask]
-                    
-                    if suv_values.size > 0:
-                        suv_stats[total_segmentator_names[roi]]['mean'] += np.sum(suv_values)
-                        suv_stats[total_segmentator_names[roi]]['max'] = max(suv_stats[total_segmentator_names[roi]]['max'], np.max(suv_values))
-                        suv_stats[total_segmentator_names[roi]]['num_val'] += suv_values.size
+                    if roi == 52:
+                        roi_mask = (roi_chunk == roi)
+                        suv_values = pet_chunk[roi_mask]
+                        
+                        if suv_values.size > 0:
+                            suv_stats[total_segmentator_names[roi]]['mean'] += np.sum(suv_values)
+                            suv_stats[total_segmentator_names[roi]]['max'] = max(suv_stats[total_segmentator_names[roi]]['max'], np.max(suv_values))
+                            suv_stats[total_segmentator_names[roi]]['num_val'] += suv_values.size
 
                 del roi_chunk, pet_chunk, roi_mask
                 gc.collect()
@@ -404,14 +405,14 @@ with os.scandir(nifti_path) as entries:
     for entry in entries:
         split_entry = entry.name.split('_')
 
-        if split_entry[0] == "INTERIM":
-            dicom_ref = "02_Second_Patch_8Lymphomas_Interim_Scans/" +  split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
-        else:
-            continue
-        # if split_entry[0] == "BASELINE":
-        #     dicom_ref = "1_Baseline/" + split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
+        # if split_entry[0] == "INTERIM":
+        #     dicom_ref = "02_Second_Patch_8Lymphomas_Interim_Scans/" +  split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
         # else:
         #     continue
+        if split_entry[0] == "BASELINE":
+            dicom_ref = "1_Baseline/" + split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
+        else:
+            continue
         # else:
         #     dicom_ref = "02_Second_Patch_8Lymphomas_Interim_Scans/" + split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
         dicom_path = os.path.join(home_path, dicom_ref)
@@ -439,7 +440,7 @@ stats = {}
 
 with os.scandir(segmentation_dir) as segmentations:
     for segmentation in segmentations:
-        if segmentation.is_file() and segmentation.name[0] == "I":
+        if segmentation.is_file() and segmentation.name[0] == "B":
 
             if segmentation.name == "BASELINE_1470016_Sub0068_Hh_CT_SOFT_60_MIN_202.nii" or segmentation.name == "BASELINE_1470016_Sub0068_Hh_CT_SOFT_120_MIN_202.nii":
                 print("skipping mismatch")
@@ -472,8 +473,8 @@ with os.scandir(segmentation_dir) as segmentations:
             print("shape of suv_vals is:", SUV_vals[pet_name].shape)
 
             # upscaled_suv_values = upscale_suv_values_3d(suv_array, new_shape)
-            memmap_filename = 'interim_upscaled_suv_values.dat'
-            upscaled_suv_values = upscale_suv_values_3d_memmap(suv_array, new_shape, memmap_filename)
+            #memmap_filename = 'interim_upscaled_suv_values.dat'
+            upscaled_suv_values = upscale_suv_values_3d(suv_array, new_shape)
 
             #SUV_vals[pet_name] = upscaled_suv_values
 
@@ -487,4 +488,4 @@ with os.scandir(segmentation_dir) as segmentations:
             gc.collect()
 
 
-np.save('interim_aorta_suv_stats.npy', stats)
+np.save('baseline_aorta_suv_stats.npy', stats)
