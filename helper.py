@@ -3,6 +3,7 @@ import shutil
 import dicom2nifti as d2n
 
 def rename_files_in_folders(parent_directory):
+    """Function that that names each file inside a directory of folders the name of the folder. Needed when converting PETs to NIFTIs"""
     # Iterate over all the items in the parent directory
     for folder_name in os.listdir(parent_directory):
         folder_path = os.path.join(parent_directory, folder_name)
@@ -82,30 +83,47 @@ def rename_files(directory):
         os.rename(old_filepath, new_filepath)
         print(f'Renamed: {old_filepath} -> {new_filepath}')
 
+
 def convert_pet_to_nifti(directory):
+    """Remember to include the reference to the specific DICOM folder used as that reference is needed when extracting statistics"""
+    PET_path = "E:/Psoriasis/PET NIFTIs/"
     with os.scandir(directory) as entries:
         for entry in entries:
-            if entry.is_dir():
+            if entry.is_dir() and entry.name[:4] == "1002":
                 patient_dir = os.path.join(directory, entry)
-                patient_dir = os.path.join(patient_dir, "Unnamed - 0")
-                with os.scandir(patient_dir) as scans:
-                    for scan in scans:
-                        if scan.is_dir():
-                            if scan.name[:3] == "PET":
-                                #print(scan.name)
-                                DICOM = os.path.join(patient_dir, scan)
-                                #print(DICOM)
-                                segmentName = patient_dir.split("/")[4].split("\\")[0]
-                                print(segmentName)
-                                segmentName = segmentName + "_CT_SOFT_" + scan.name.split("_")[3]
-                                PET_path = "D:/Documents/Alavi Lab/Lymphoma/PET NIFTIs/Interim/"
-                                saveOutput = os.path.join(PET_path, segmentName)
-                                os.makedirs(saveOutput, exist_ok=True)
-                                d2n.convert_directory(DICOM, saveOutput)
+                patient_dir = os.path.join(patient_dir, "study")
 
-directory = "E:/UC Davis DTP Lymphoma/Automated Segmentations/Interim"
+
+                if entry.name == "1002014-668-A":
+                    DICOM = os.path.join(patient_dir, "STL_pet_slices_IR_MAC")
+                    saveOutput = os.path.join(PET_path, entry.name + "_STL_pet_slices_IR_MAC")
+                    os.makedirs(saveOutput, exist_ok=True)
+                    d2n.convert_directory(DICOM, saveOutput)
+                elif entry.name == "1002001-850-A":
+                    DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
+                    saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
+                    os.makedirs(saveOutput, exist_ok=True)
+                    d2n.convert_directory(DICOM, saveOutput)
+                elif entry.name == "1002001-850-B":
+                    DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
+                    saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
+                    os.makedirs(saveOutput, exist_ok=True)
+                    d2n.convert_directory(DICOM, saveOutput)
+
+                else:
+                    with os.scandir(patient_dir) as scans:
+                        for scan in scans:
+                            if scan.is_dir():
+                                if scan.name[:3] == "PET":
+                                    DICOM = os.path.join(patient_dir, scan)
+                                    saveOutput = os.path.join(PET_path, entry.name + "_" + scan.name)
+                                    os.makedirs(saveOutput, exist_ok=True)
+                                    d2n.convert_directory(DICOM, saveOutput)
+
+
 
 def move_files_out_of_folders(directory):
+    """Takes each file inside each PET NIFTI folder and moves it out of the folder"""
     # Iterate over each item in the provided directory
     for folder_name in os.listdir(directory):
         folder_path = os.path.join(directory, folder_name)
@@ -144,4 +162,7 @@ def add_prefix_to_files(directory, prefix):
             os.rename(file_path, new_file_path)
             print(f"Renamed '{file_path}' to '{new_file_path}'")
 
-#add_prefix_to_files(directory, "INTERIM_")
+directory = "E:/Psoriasis/VIP-S/"
+convert_pet_to_nifti(directory)
+rename_files_in_folders("E:/Psoriasis/PET NIFTIs/")
+move_files_out_of_folders("E:/Psoriasis/PET NIFTIs/")

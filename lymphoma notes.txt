@@ -1,0 +1,10 @@
+both chunked: 'aorta': {'mean': 0.3289413364271649, 'max': 2.825172, 'median': 0, 'num_val': 360605}
+both normal: aorta {'mean': 1.3227227, 'max': 15.741137, 'median': 1.2307957, 'num_val': 360605}
+memmape upscaled values: aorta {'mean': 0.32894135, 'max': 2.825172, 'median': 0.13330467, 'num_val': 360605}
+normal upscale , calculate suv chunked: {'mean': 1.3227227659729666, 'max': 15.741137, 'median': 0, 'num_val': 360605}
+
+
+Comparisons:
+Of the baseline scans: 60-120 min
+Both baseline to both interim scans (only patients that have both)
+Compared to healthy controls (same healthy as COVID)

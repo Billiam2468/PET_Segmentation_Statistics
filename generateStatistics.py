@@ -123,11 +123,33 @@ total_segmentator_names = [
     "costal_cartilages"
 ]
 
+joint_names = [
+    "Left toe-metatarsal",
+    "Left metatarsal-tarsal",
+    "Left tarsal-tibial",
+    "Left tibial-femoral",
+    "Right toe-metatarsal",
+    "Right metatarsal-tarsal",
+    "Right tarsal-tibial",
+    "Right tibial-femoral",
+    "Left finger-metacarpal",
+    "Left metacarpal-carpal",
+    "Left carpal-radial",
+    "Left radial-humeral",
+    "Left humeral-scapular",
+    "Right finger-metacarpal",
+    "Right metacarpal-carpal",
+    "Right carpal-radial",
+    "Right radial-humeral",
+    "Right humeral-scapular"
+]
+
 import nibabel as nib
 import numpy as np
 import pydicom
 from datetime import datetime
 import os
+import sys
 import gc
 from scipy import interpolate
 import pandas as pd
@@ -198,7 +220,7 @@ def calculate_time_difference(scan_time_str, injection_time_str):
 
 def convert_raw_PET_to_SUV(pet_dicom, pet_nifti):
     PET_data = load_nifti_file(pet_nifti)
-    print(pet_dicom)
+    #print(pet_dicom)
     full_path = os.path.join(pet_dicom, os.listdir(pet_dicom)[0])
     ds = pydicom.dcmread(full_path)
     
@@ -206,10 +228,18 @@ def convert_raw_PET_to_SUV(pet_dicom, pet_nifti):
     # scantime = parse_time(ds.SeriesTime)
     # # Start Time for the Radiopharmaceutical Injection
     # injection_time = parse_time(ds.RadiopharmaceuticalInformationSequence[0].RadiopharmaceuticalStartTime)
-
-    time_diff = abs(calculate_time_difference(ds.SeriesTime, ds.RadiopharmaceuticalInformationSequence[0].RadiopharmaceuticalStartTime))
+    print("Series time:")
     print(ds.SeriesTime)
+
+    print("Injection time:")
     print(ds.RadiopharmaceuticalInformationSequence[0].RadiopharmaceuticalStartTime)
+
+    # Hard coded for exception due to bad metadata here for this DICOM. Said injection time was 105900000000. Should probably be 105900.00
+    if pet_dicom == "E:/Psoriasis/VIP-S/1002017-199-A/study/PET_SLICES_IR_MAC":
+        time_diff = abs(calculate_time_difference(ds.SeriesTime, '105900.00'))
+    else:
+        time_diff = abs(calculate_time_difference(ds.SeriesTime, ds.RadiopharmaceuticalInformationSequence[0].RadiopharmaceuticalStartTime))
+
     
     # Half Life for Radionuclide # seconds
     half_life = float(ds.RadiopharmaceuticalInformationSequence[0].RadionuclideHalfLife) 
@@ -233,7 +263,8 @@ def convert_raw_PET_to_SUV(pet_dicom, pet_nifti):
     print("SUV factor is:", SUV_factor)
     return(PET_data * SUV_factor).astype(np.float32)
 
-def calculate_suv_statistics(roi_data, pet_data):
+def calculate_suv_statistics(roi_data, pet_data, reference):
+    """DEPRECATED DUE TO MEMORY ISSUES"""
     """Calculate SUV statistics for each unique ROI."""
     #print(roi_data)
     unique_rois = np.arange(0, 118)
@@ -264,7 +295,7 @@ def calculate_suv_statistics(roi_data, pet_data):
                 num_val = len(suv_values)
             
             
-            suv_stats[total_segmentator_names[int(roi)]] = {
+            suv_stats[reference[int(roi)]] = {
                 'mean': mean_suv,
                 'max': max_suv,
                 'median': median_suv,
@@ -272,8 +303,8 @@ def calculate_suv_statistics(roi_data, pet_data):
             }
     return suv_stats
 
-def calculate_suv_statistics_chunked(roi_data, pet_data, chunk_size=(64, 64, 64)):
-    unique_rois = np.arange(0, 118)
+def calculate_suv_statistics_chunked(roi_data, pet_data, reference, chunk_size=(64, 64, 64)):
+    unique_rois = np.arange(0, len(reference))
     suv_stats = {}
 
     # Determine chunk ranges
@@ -287,7 +318,7 @@ def calculate_suv_statistics_chunked(roi_data, pet_data, chunk_size=(64, 64, 64)
     # Initialize stats dictionary for all ROIs
     for roi in unique_rois:
         if roi != 0:  # Skip the background
-            suv_stats[total_segmentator_names[roi]] = {'mean': 0, 'max': -np.inf, 'median': 0, 'num_val': 0}
+            suv_stats[reference[roi]] = {'mean': 0, 'max': -np.inf, 'median': 0, 'num_val': 0}
     
     # Process each chunk
     for (start_x, end_x) in chunks_x:
@@ -299,14 +330,13 @@ def calculate_suv_statistics_chunked(roi_data, pet_data, chunk_size=(64, 64, 64)
                 for roi in unique_rois:
                     if roi == 0:
                         continue  # Skip the background
-                    if roi == 52:
-                        roi_mask = (roi_chunk == roi)
-                        suv_values = pet_chunk[roi_mask]
-                        
-                        if suv_values.size > 0:
-                            suv_stats[total_segmentator_names[roi]]['mean'] += np.sum(suv_values)
-                            suv_stats[total_segmentator_names[roi]]['max'] = max(suv_stats[total_segmentator_names[roi]]['max'], np.max(suv_values))
-                            suv_stats[total_segmentator_names[roi]]['num_val'] += suv_values.size
+                    roi_mask = (roi_chunk == roi)
+                    suv_values = pet_chunk[roi_mask]
+                    
+                    if suv_values.size > 0:
+                        suv_stats[reference[roi]]['mean'] += np.sum(suv_values)
+                        suv_stats[reference[roi]]['max'] = max(suv_stats[reference[roi]]['max'], np.max(suv_values))
+                        suv_stats[reference[roi]]['num_val'] += suv_values.size
 
                 del roi_chunk, pet_chunk, roi_mask
                 gc.collect()
@@ -314,13 +344,13 @@ def calculate_suv_statistics_chunked(roi_data, pet_data, chunk_size=(64, 64, 64)
     # Finalize statistics (calculate mean)
     for roi in unique_rois:
         if roi != 0:
-            num_val = suv_stats[total_segmentator_names[roi]]['num_val']
+            num_val = suv_stats[reference[roi]]['num_val']
             if num_val > 0:
-                suv_stats[total_segmentator_names[roi]]['mean'] /= num_val
+                suv_stats[reference[roi]]['mean'] /= num_val
             else:
-                suv_stats[total_segmentator_names[roi]]['mean'] = None
-                suv_stats[total_segmentator_names[roi]]['max'] = None
-                suv_stats[total_segmentator_names[roi]]['median'] = None
+                suv_stats[reference[roi]]['mean'] = None
+                suv_stats[reference[roi]]['max'] = None
+                suv_stats[reference[roi]]['median'] = None
 
     return suv_stats
 
@@ -396,96 +426,71 @@ def upscale_suv_values_3d_memmap(suv_values, new_shape, memmap_filename):
 
 
 
-nifti_path = "E:/UC Davis DTP Lymphoma/PET NIFTIs/"
-home_path = "E:/UC Davis DTP Lymphoma/4_Dicom Images/"
+nifti_path = "E:/Psoriasis/PET NIFTIs/"
+home_path = "E:/Psoriasis/VIP-S/"
 
 SUV_vals = {}
 
 with os.scandir(nifti_path) as entries:
     for entry in entries:
+
+        # Create reference to DICOM each NIFTI comes from
         split_entry = entry.name.split('_')
-
-        # if split_entry[0] == "INTERIM":
-        #     dicom_ref = "02_Second_Patch_8Lymphomas_Interim_Scans/" +  split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
-        # else:
-        #     continue
-        if split_entry[0] == "BASELINE":
-            dicom_ref = "1_Baseline/" + split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
-        else:
-            continue
-        # else:
-        #     dicom_ref = "02_Second_Patch_8Lymphomas_Interim_Scans/" + split_entry[1] + "_" + split_entry[2] + "_" + split_entry[3] + "/Unnamed - 0/"
+        fileName = '_'.join(split_entry[1:])
+        fileName = fileName[:-7]
+        dicom_ref = split_entry[0] + "/study/" + fileName
         dicom_path = os.path.join(home_path, dicom_ref)
-        #print(dicom_path)
+        print(dicom_path)
 
-        with os.scandir(dicom_path) as scans:
-            for scanType in scans:
-                if scanType.is_dir():
-                    #print(split_entry[6][:-7])
-                    #print(scanType.name)
-                    if split_entry[6][:-7] == scanType.name.split('_')[3]:
-                        #print(scanType)
-                        dicom_folder = os.path.join(dicom_path, scanType)
-                        print(entry.name)
-                        SUV_vals[entry.name] = convert_raw_PET_to_SUV(dicom_folder, entry)
+        SUV_vals[split_entry[0]] = convert_raw_PET_to_SUV(dicom_path, entry)
+
+        # with os.scandir(dicom_path) as scans:
+        #     for scanType in scans:
+        #         if scanType.is_dir():
+        #             #print(split_entry[6][:-7])
+        #             #print(scanType.name)
+        #             if split_entry[6][:-7] == scanType.name.split('_')[3]:
+        #                 #print(scanType)
+        #                 dicom_folder = os.path.join(dicom_path, scanType)
+        #                 print(entry.name)
+        #                 SUV_vals[entry.name] = convert_raw_PET_to_SUV(dicom_folder, entry)
 
 
 import nrrd
 import gc
 
-#segmentation_dir = home_dir + "Segmentations and PET NIFTIs/Edited Organs/Brain/"
-segmentation_dir = "E:/UC Davis DTP Lymphoma/Automated Segmentations/"
+segmentation_dir = "E:/Psoriasis/Peripheral_AI_Segmentations/Site 1002/Joint Segmentations/"
 
 stats = {}
 
 with os.scandir(segmentation_dir) as segmentations:
     for segmentation in segmentations:
-        if segmentation.is_file() and segmentation.name[0] == "B":
-
-            if segmentation.name == "BASELINE_1470016_Sub0068_Hh_CT_SOFT_60_MIN_202.nii" or segmentation.name == "BASELINE_1470016_Sub0068_Hh_CT_SOFT_120_MIN_202.nii":
-                print("skipping mismatch")
-                continue
-            if segmentation.name == "INTERIM_1470016_Sub0068_Hh_CT_SOFT_60_MIN_202.nii" or segmentation.name == "INTERIM_1470016_Sub0068_Hh_CT_SOFT_120_MIN_202.nii":
-                print("skipping interim mismatch")
-                continue
-
+        if segmentation.is_file():
             print(segmentation.name)
-            #pet_name = segmentation.name + ".gz"
-
-            # Change this from -4 to something else depending on the file extension or if there is extra stuff at end of name differentiating pet from segmentation
-
-            pet_name = segmentation.name[:-12] + ".nii.gz"
+            pet_name = segmentation.name.split('_')[4]
             seg_dir = os.path.join(segmentation_dir, segmentation)
 
             #If files are nifti use below:
-            segmentation_img = nib.load(seg_dir)
-            segmentation_data = segmentation_img.get_fdata()
+            # segmentation_img = nib.load(seg_dir)
+            # segmentation_data = segmentation_img.get_fdata()
 
             #If files are nrrd use below:
-            #segmentation_data, header_data = nrrd.read(seg_dir)
+            segmentation_data, header_data = nrrd.read(seg_dir)
 
             # Upscale the PET SUV values to match the shape of the segmentation
             new_shape = (segmentation_data.shape[0], segmentation_data.shape[1], segmentation_data.shape[2])
-            print(new_shape)
+            print("Shape of segmentation is: ", new_shape)
 
-            #no need to set array equal to suv array, just access directly
-            suv_array = SUV_vals[pet_name]
-            print("shape of suv_vals is:", SUV_vals[pet_name].shape)
+            print("Shape of PET suv_vals is: ", SUV_vals[pet_name].shape)
 
             # upscaled_suv_values = upscale_suv_values_3d(suv_array, new_shape)
-            #memmap_filename = 'interim_upscaled_suv_values.dat'
-            upscaled_suv_values = upscale_suv_values_3d(suv_array, new_shape)
-
-            #SUV_vals[pet_name] = upscaled_suv_values
-
-            # Calculate the statistics of the PET SUV values inside the segmentation mask
-            # stats[pet_name] = calculate_suv_statistics(segmentation_data, SUV_vals[pet_name])
+            upscaled_suv_values = upscale_suv_values_3d(SUV_vals[pet_name], new_shape)
 
             chunk_size = 50  # Adjust the chunk size based on your available memory
-            stats[pet_name] = calculate_suv_statistics_chunked(segmentation_data, upscaled_suv_values)
+            stats[pet_name] = calculate_suv_statistics_chunked(segmentation_data, upscaled_suv_values, joint_names)
 
-            del segmentation_img, segmentation_data, upscaled_suv_values
+            del segmentation_data, upscaled_suv_values
             gc.collect()
 
 
-np.save('baseline_aorta_suv_stats.npy', stats)
+np.save('site_1002_joint_suv_stats.npy', stats)
