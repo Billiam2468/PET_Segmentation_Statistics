@@ -426,23 +426,23 @@ def upscale_suv_values_3d_memmap(suv_values, new_shape, memmap_filename):
 
 
 
-nifti_path = "E:/Psoriasis/PET NIFTIs/"
+nifti_path = "E:/Psoriasis/PET NIFTIs/Site 1002/"
 home_path = "E:/Psoriasis/VIP-S/"
 
 SUV_vals = {}
 
 with os.scandir(nifti_path) as entries:
     for entry in entries:
+        if entry.is_file():
+            # Create reference to DICOM each NIFTI comes from
+            split_entry = entry.name.split('_')
+            fileName = '_'.join(split_entry[1:])
+            fileName = fileName[:-7]
+            dicom_ref = split_entry[0] + "/study/" + fileName
+            dicom_path = os.path.join(home_path, dicom_ref)
+            print(dicom_path)
 
-        # Create reference to DICOM each NIFTI comes from
-        split_entry = entry.name.split('_')
-        fileName = '_'.join(split_entry[1:])
-        fileName = fileName[:-7]
-        dicom_ref = split_entry[0] + "/study/" + fileName
-        dicom_path = os.path.join(home_path, dicom_ref)
-        print(dicom_path)
-
-        SUV_vals[split_entry[0]] = convert_raw_PET_to_SUV(dicom_path, entry)
+            SUV_vals[split_entry[0]] = convert_raw_PET_to_SUV(dicom_path, entry)
 
         # with os.scandir(dicom_path) as scans:
         #     for scanType in scans:
@@ -455,6 +455,7 @@ with os.scandir(nifti_path) as entries:
         #                 print(entry.name)
         #                 SUV_vals[entry.name] = convert_raw_PET_to_SUV(dicom_folder, entry)
 
+sys.exit()
 
 import nrrd
 import gc

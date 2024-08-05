@@ -62,7 +62,6 @@ def extract_segmentation(parent_directory):
 
     #print(segment_files)
 
-
 def rename_files(directory):
     # String to remove from the filenames
     string_to_remove = 'EditedBrain'
@@ -83,44 +82,49 @@ def rename_files(directory):
         os.rename(old_filepath, new_filepath)
         print(f'Renamed: {old_filepath} -> {new_filepath}')
 
-
 def convert_pet_to_nifti(directory):
     """Remember to include the reference to the specific DICOM folder used as that reference is needed when extracting statistics"""
-    PET_path = "E:/Psoriasis/PET NIFTIs/"
+    PET_path = "E:/Psoriasis/PET NIFTIs/Site 1005"
     with os.scandir(directory) as entries:
         for entry in entries:
-            if entry.is_dir() and entry.name[:4] == "1002":
+            if entry.is_dir() and entry.name[:4] == "1012":
                 patient_dir = os.path.join(directory, entry)
                 patient_dir = os.path.join(patient_dir, "study")
 
 
-                if entry.name == "1002014-668-A":
-                    DICOM = os.path.join(patient_dir, "STL_pet_slices_IR_MAC")
-                    saveOutput = os.path.join(PET_path, entry.name + "_STL_pet_slices_IR_MAC")
-                    os.makedirs(saveOutput, exist_ok=True)
-                    d2n.convert_directory(DICOM, saveOutput)
-                elif entry.name == "1002001-850-A":
-                    DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
-                    saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
-                    os.makedirs(saveOutput, exist_ok=True)
-                    d2n.convert_directory(DICOM, saveOutput)
-                elif entry.name == "1002001-850-B":
-                    DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
-                    saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
-                    os.makedirs(saveOutput, exist_ok=True)
-                    d2n.convert_directory(DICOM, saveOutput)
-
-                else:
-                    with os.scandir(patient_dir) as scans:
-                        for scan in scans:
-                            if scan.is_dir():
-                                if scan.name[:3] == "PET":
-                                    DICOM = os.path.join(patient_dir, scan)
-                                    saveOutput = os.path.join(PET_path, entry.name + "_" + scan.name)
-                                    os.makedirs(saveOutput, exist_ok=True)
-                                    d2n.convert_directory(DICOM, saveOutput)
+                # if entry.name == "1002014-668-A":
+                #     DICOM = os.path.join(patient_dir, "STL_pet_slices_IR_MAC")
+                #     saveOutput = os.path.join(PET_path, entry.name + "_STL_pet_slices_IR_MAC")
+                #     os.makedirs(saveOutput, exist_ok=True)
+                #     d2n.convert_directory(DICOM, saveOutput)
+                # elif entry.name == "1002001-850-A":
+                #     DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
+                #     saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
+                #     os.makedirs(saveOutput, exist_ok=True)
+                #     d2n.convert_directory(DICOM, saveOutput)
+                # elif entry.name == "1002001-850-B":
+                #     DICOM = os.path.join(patient_dir, "PROSP_AC_2D_WB")
+                #     saveOutput = os.path.join(PET_path, entry.name + "_PROSP_AC_2D_WB")
+                #     os.makedirs(saveOutput, exist_ok=True)
+                #     d2n.convert_directory(DICOM, saveOutput)
 
 
+                # if entry.name == "1003010-269-A":
+                #     DICOM = os.path.join(patient_dir, "Corrected_for_SUV_Calculation")
+                #     saveOutput = os.path.join(PET_path, entry.name + "_Corrected_for_SUV_Calculation")
+                #     os.makedirs(saveOutput, exist_ok=True)
+                #     d2n.convert_directory(DICOM, saveOutput)
+                # else:
+                with os.scandir(patient_dir) as scans:
+                    for scan in scans:
+                        if scan.is_dir():
+                            if scan.name.endswith("(AC)"):
+                                print(entry.name)
+                                print(scan.name)
+                                DICOM = os.path.join(patient_dir, scan)
+                                saveOutput = os.path.join(PET_path, entry.name + "_" + scan.name)
+                                os.makedirs(saveOutput, exist_ok=True)
+                                d2n.convert_directory(DICOM, saveOutput)
 
 def move_files_out_of_folders(directory):
     """Takes each file inside each PET NIFTI folder and moves it out of the folder"""
@@ -146,7 +150,6 @@ def move_files_out_of_folders(directory):
             os.rmdir(folder_path)
             print(f"Removed empty folder '{folder_path}'")
 
-
 def add_prefix_to_files(directory, prefix):
     # Iterate over each item in the provided directory
     for file_name in os.listdir(directory):
@@ -163,6 +166,6 @@ def add_prefix_to_files(directory, prefix):
             print(f"Renamed '{file_path}' to '{new_file_path}'")
 
 directory = "E:/Psoriasis/VIP-S/"
-convert_pet_to_nifti(directory)
-rename_files_in_folders("E:/Psoriasis/PET NIFTIs/")
-move_files_out_of_folders("E:/Psoriasis/PET NIFTIs/")
+#convert_pet_to_nifti(directory)
+#rename_files_in_folders("E:/Psoriasis/PET NIFTIs/Site 1012")
+#move_files_out_of_folders("E:/Psoriasis/PET NIFTIs/Site 1012")
