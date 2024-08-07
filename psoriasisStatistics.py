@@ -1,7 +1,10 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 joint_names = [
+    "Background",
     "Left toe-metatarsal",
     "Left metatarsal-tarsal",
     "Left tarsal-tibial",
@@ -106,36 +109,99 @@ def calculateStatistics(combined_scans, joint, stat):
     organizationFiles = "E:/Psoriasis/VIP-S Subject Tracker_Accounting Final.xlsx"
     df = pd.read_excel(organizationFiles)
     
+    # Initiating empty dataframe:
+    columns = ["Patient", "Week 0", "Week 12", "Week 52"]
+    statistics_df = pd.DataFrame(columns=columns)
+
     for index, row in df.iterrows():
         if str(row['Subject #']).startswith('1002'):
             if str(row['Subject #']) == "1002018":
                 continue
-            print(str(row['Subject #']))
+            #print(str(row['Subject #']))
             subject_name = str(row['Subject #'])
+
+            #Add patient data to df:
+            patient_data = {"Patient": subject_name}
+
             code0 = row['IRC_Week 0 baseline']
             if not np.isnan(code0):
                 week_0 = subject_name + "-" + f"{int(code0):03}"
                 stat1 = retrieveStats(combined_scans, week_0, joint, stat)
+                patient_data["Week 0"] = stat1
                 #print(week_0)
-                print(stat1)
+                #print(stat1)
+            else:
+                patient_data["Week 0"] = np.nan
+
+
             code1 = row['IRC_Week 12']
             if not np.isnan(code1):
                 week_1 = subject_name + "-" + f"{int(code1):03}"
                 stat2 = retrieveStats(combined_scans, week_1, joint, stat)
                 #print(week_1)
-                print(stat2)
+                #print(stat2)
+                patient_data["Week 12"] = stat2
+            else:
+                patient_data["Week 12"] = np.nan
+            
+
             code2 = row['IRC_Week 52']
             if not np.isnan(code2):
                 week_2 = subject_name + "-" + f"{int(code2):03}"
                 stat3 = retrieveStats(combined_scans, week_2, joint, stat)
                 #print(week_2)
-                print(stat3)
+                #print(stat3)
+                patient_data["Week 52"] = stat3
+            else:
+                patient_data["Week 52"] = np.nan
             # print(f"Week 0: {int(row['IRC_Week 0 baseline'])}")
             # print(f"Week 12: {int(row['IRC_Week 12'])}")
             # print(f"Week 52: {int(row['IRC_Week 52'])}")
+
+            # Append the patient's data to the DataFrame
+            patient_data = pd.DataFrame([patient_data])
+            statistics_df = pd.concat([statistics_df, patient_data])
+            #statistics_df = statistics_df.append(patient_data, ignore_index=True)
+    return statistics_df
+
+def plot_patient_statistics(statistics_df, joint, save_path):
+    # Melt the DataFrame to have 'Time Point' as a variable and 'Value' as value
+    plot_df = statistics_df.melt(id_vars="Patient", var_name="Time Point", value_name="Value")
+    
+    # Set the style and size of the plot
+    sns.set(style="whitegrid")
+    plt.figure(figsize=(12, 8))
+    
+    # Create a line plot for each patient
+    sns.lineplot(data=plot_df, x="Time Point", y="Value", hue="Patient", marker='o', palette='tab10')
+    
+    # Add a title and labels
+    plt.title(f"SUV means of {joint_names[joint]} joint over time")
+    plt.xlabel("Time Point")
+    plt.ylabel("Value")
+    
+    # Adjust legend to prevent it from being cut off
+    plt.legend(title="Patient", bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    
+    # Adjust layout to make room for the legend
+    plt.tight_layout()
+
+    # Save the plot if a save path is provided
+    if save_path:
+        plt.savefig(save_path)
+
+    # Show the plot
+    #plt.show()
 
 combined = combine_scans('D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/site_1002_joint_suv_stats.npy')
 present_joints = detectPresentJoints(combined)
 
 # For our first test we will calculate 10,11,14,15 for site 1002
-calculateStatistics(combined, 10, 'mean')
+for i in range(1, 9):
+    i = 1
+    print(f"For Joint {i}")
+    statistics_df = calculateStatistics(combined, i, 'mean')
+    statistics_df = statistics_df.drop(columns=['Week 12'])
+    save_path = "D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/Figures/Site 1002/No week 12/" + f"{joint_names[i]}.png"
+    plot_patient_statistics(statistics_df, i, False)#,save_path)
+

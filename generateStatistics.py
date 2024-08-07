@@ -124,6 +124,7 @@ total_segmentator_names = [
 ]
 
 joint_names = [
+    "Background",
     "Left toe-metatarsal",
     "Left metatarsal-tarsal",
     "Left tarsal-tibial",
@@ -317,7 +318,7 @@ def calculate_suv_statistics_chunked(roi_data, pet_data, reference, chunk_size=(
 
     # Initialize stats dictionary for all ROIs
     for roi in unique_rois:
-        if roi != 0:  # Skip the background
+        if roi != 0:  # Skip the background (don't skip background because 0 is left toe metatarsal)
             suv_stats[reference[roi]] = {'mean': 0, 'max': -np.inf, 'median': 0, 'num_val': 0}
     
     # Process each chunk
@@ -426,7 +427,7 @@ def upscale_suv_values_3d_memmap(suv_values, new_shape, memmap_filename):
 
 
 
-nifti_path = "E:/Psoriasis/PET NIFTIs/Site 1002/"
+nifti_path = "E:/Psoriasis/PET NIFTIs/Site 1012/"
 home_path = "E:/Psoriasis/VIP-S/"
 
 SUV_vals = {}
@@ -455,12 +456,10 @@ with os.scandir(nifti_path) as entries:
         #                 print(entry.name)
         #                 SUV_vals[entry.name] = convert_raw_PET_to_SUV(dicom_folder, entry)
 
-sys.exit()
-
 import nrrd
 import gc
 
-segmentation_dir = "E:/Psoriasis/Peripheral_AI_Segmentations/Site 1002/Joint Segmentations/"
+segmentation_dir = "E:/Psoriasis/Peripheral_AI_Segmentations/Site 1012/Joint Segmentations/"
 
 stats = {}
 
@@ -494,4 +493,4 @@ with os.scandir(segmentation_dir) as segmentations:
             gc.collect()
 
 
-np.save('site_1002_joint_suv_stats.npy', stats)
+np.save('site_1012_joint_suv_stats.npy', stats)
