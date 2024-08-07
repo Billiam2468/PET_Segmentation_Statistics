@@ -29,6 +29,8 @@ def combine_scans(path):
     """This function takes an npy file and combines the separate A,B,C scans into one and outputs the combined dictionary without the A,B,C suffixes"""
     combined_scans = {}
     scans = np.load(path, allow_pickle='TRUE').item()
+    for key,val in scans.items():
+        print(key)
 
     for scan_id, regions in scans.items():
         # Get the base scan ID without the component suffix (A, B, C)
@@ -104,7 +106,7 @@ def retrieveStats(combined_scans, scan, joint, stat):
     # print(combined_scans)
     return combined_scans[scan][joint_names[joint]][stat]
 
-def calculateStatistics(combined_scans, joint, stat):
+def calculateStatistics(combined_scans, joint, stat, site):
     #print(combined_scans)
     organizationFiles = "E:/Psoriasis/VIP-S Subject Tracker_Accounting Final.xlsx"
     df = pd.read_excel(organizationFiles)
@@ -114,10 +116,36 @@ def calculateStatistics(combined_scans, joint, stat):
     statistics_df = pd.DataFrame(columns=columns)
 
     for index, row in df.iterrows():
-        if str(row['Subject #']).startswith('1002'):
-            if str(row['Subject #']) == "1002018":
-                continue
-            #print(str(row['Subject #']))
+        if str(row['Subject #']).startswith(site):
+            # if str(row['Subject #']) == "1002018":
+            #     continue
+
+            # if str(row['Subject #']) == "1003005":
+            #    continue
+
+
+            # if str(row['Subject #']) == "1003007" and row['IRC_Week 0 baseline'] == 531:
+            #    continue
+            # if str(row['Subject #']) == "1005001" and row['IRC_Week 0 baseline'] == 322:
+            #    continue
+            # if str(row['Subject #']) == "1005002" and row['IRC_Week 0 baseline'] == 742:
+            #    continue
+            # if str(row['Subject #']) == "1005004" and row['IRC_Week 0 baseline'] == 295:
+            #    continue
+            # if str(row['Subject #']) == "1005007" and row['IRC_Week 12'] == 241:
+            #    continue
+            # if str(row['Subject #']) == "1005011" and row['IRC_Week 0 baseline'] == 764:
+            #    continue
+            # if str(row['Subject #']) == "1005013" and row['IRC_Week 0 baseline'] == 890:
+            #    continue
+            
+            # if str(row['Subject #']) == "1012001" and row['IRC_Week 0 baseline'] == 980:
+            #    continue
+            # if str(row['Subject #']) == "1012003" and row['IRC_Week 0 baseline'] == 802:
+            #    continue
+            # if str(row['Subject #']) == "1012006" and row['IRC_Week 0 baseline'] == 351:
+            #    continue
+
             subject_name = str(row['Subject #'])
 
             #Add patient data to df:
@@ -126,10 +154,12 @@ def calculateStatistics(combined_scans, joint, stat):
             code0 = row['IRC_Week 0 baseline']
             if not np.isnan(code0):
                 week_0 = subject_name + "-" + f"{int(code0):03}"
-                stat1 = retrieveStats(combined_scans, week_0, joint, stat)
-                patient_data["Week 0"] = stat1
-                #print(week_0)
-                #print(stat1)
+
+                if week_0 in combined_scans:
+                    stat1 = retrieveStats(combined_scans, week_0, joint, stat)
+                    patient_data["Week 0"] = stat1
+                else:
+                    patient_data["Week 0"] = np.nan
             else:
                 patient_data["Week 0"] = np.nan
 
@@ -137,10 +167,11 @@ def calculateStatistics(combined_scans, joint, stat):
             code1 = row['IRC_Week 12']
             if not np.isnan(code1):
                 week_1 = subject_name + "-" + f"{int(code1):03}"
-                stat2 = retrieveStats(combined_scans, week_1, joint, stat)
-                #print(week_1)
-                #print(stat2)
-                patient_data["Week 12"] = stat2
+                if week_1 in combined_scans:
+                    stat2 = retrieveStats(combined_scans, week_1, joint, stat)
+                    patient_data["Week 12"] = stat2
+                else:
+                    patient_data["Week 12"] = np.nan
             else:
                 patient_data["Week 12"] = np.nan
             
@@ -148,10 +179,12 @@ def calculateStatistics(combined_scans, joint, stat):
             code2 = row['IRC_Week 52']
             if not np.isnan(code2):
                 week_2 = subject_name + "-" + f"{int(code2):03}"
-                stat3 = retrieveStats(combined_scans, week_2, joint, stat)
-                #print(week_2)
-                #print(stat3)
-                patient_data["Week 52"] = stat3
+
+                if week_2 in combined_scans:
+                    stat3 = retrieveStats(combined_scans, week_2, joint, stat)
+                    patient_data["Week 52"] = stat3
+                else:
+                    patient_data["Week 52"] = np.nan
             else:
                 patient_data["Week 52"] = np.nan
             # print(f"Week 0: {int(row['IRC_Week 0 baseline'])}")
@@ -193,15 +226,23 @@ def plot_patient_statistics(statistics_df, joint, save_path):
     # Show the plot
     #plt.show()
 
-combined = combine_scans('D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/site_1002_joint_suv_stats.npy')
-present_joints = detectPresentJoints(combined)
 
-# For our first test we will calculate 10,11,14,15 for site 1002
-for i in range(1, 9):
-    i = 1
+
+combined = combine_scans('D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/site_1003_joint_suv_stats.npy')
+
+# No need to do combine for Site 1005 since no A,B,C scans
+#combined = np.load('D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/site_1005_joint_suv_stats.npy', allow_pickle='TRUE').item()
+present_joints = detectPresentJoints(combined)
+print(present_joints)
+
+# # For our first test we will calculate 10,11,14,15 for site 1002
+for i in range(1, 19):
     print(f"For Joint {i}")
-    statistics_df = calculateStatistics(combined, i, 'mean')
-    statistics_df = statistics_df.drop(columns=['Week 12'])
-    save_path = "D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/Figures/Site 1002/No week 12/" + f"{joint_names[i]}.png"
-    plot_patient_statistics(statistics_df, i, False)#,save_path)
+    statistics_df = calculateStatistics(combined, i, 'mean', '1003')
+
+    print(statistics_df)
+    # Excluding Week 12 from scans
+    #statistics_df = statistics_df.drop(columns=['Week 12'])
+    save_path = "D:/Documents/Repos/PET_Segmentation_Statistics/Psoriasis Statistics/Figures/Site 1003/" + f"{joint_names[i]}.png"
+    plot_patient_statistics(statistics_df, i, save_path)
 
